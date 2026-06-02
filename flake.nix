@@ -4,7 +4,7 @@
 	inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
 	outputs = { self, nixpkgs }: let
-	version = "54.4.1";
+	version = "54.7.1";
 
 	platforms = {
 		"x86_64-linux" = {
