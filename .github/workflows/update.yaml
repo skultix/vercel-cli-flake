@@ -1,0 +1,109 @@
+name: Update Vercel CLI
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Check latest Vercel CLI version
+        id: version
+        run: |
+          LATEST=$(curl -fsSL https://registry.npmjs.org/vercel/latest | jq -r .version)
+          CURRENT=$(grep -oP '(?<=version = ")[^"]+' flake.nix)
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Latest: $LATEST  |  Current: $CURRENT"
+
+      - name: Skip if already up to date
+        if: steps.version.outputs.latest == steps.version.outputs.current
+        run: |
+          echo "Already on ${{ steps.version.outputs.current }}, nothing to do."
+
+      - name: Fetch hashes for both platforms
+        if: steps.version.outputs.latest != steps.version.outputs.current
+        id: hashes
+        env:
+          VERSION: ${{ steps.version.outputs.latest }}
+        run: |
+          fetch_hash() {
+            local pkg="$1"
+            local url="https://registry.npmjs.org/@vercel/${pkg}/-/${pkg}-${VERSION}.tgz"
+            nix-prefetch-url --type sha512 "$url" 2>/dev/null
+          }
+
+          RAW_X64=$(fetch_hash "vc-native-linux-x64")
+          RAW_ARM64=$(fetch_hash "vc-native-linux-arm64")
+
+          # Convert raw base16 nix hash to sri sha512 format
+          to_sri() {
+            echo "sha512-$(echo "$1" | xxd -r -p | base64 -w 0)"
+          }
+
+          HASH_X64=$(to_sri "$RAW_X64")
+          HASH_ARM64=$(to_sri "$RAW_ARM64")
+
+          echo "hash_x64=$HASH_X64" >> "$GITHUB_OUTPUT"
+          echo "hash_arm64=$HASH_ARM64" >> "$GITHUB_OUTPUT"
+          echo "x86_64-linux: $HASH_X64"
+          echo "aarch64-linux: $HASH_ARM64"
+
+      - name: Update flake.nix
+        if: steps.version.outputs.latest != steps.version.outputs.current
+        env:
+          VERSION: ${{ steps.version.outputs.latest }}
+          HASH_X64: ${{ steps.hashes.outputs.hash_x64 }}
+          HASH_ARM64: ${{ steps.hashes.outputs.hash_arm64 }}
+        run: |
+          # Update version
+          sed -i "s|version = \"[^\"]*\";|version = \"${VERSION}\";|" flake.nix
+
+          # Update x86_64-linux hash (the first hash= line after vc-native-linux-x64)
+          python3 - <<'EOF'
+          import re, os
+
+          path = "flake.nix"
+          content = open(path).read()
+
+          def replace_platform_hash(text, pkg, new_hash):
+              # Match the pkg line and the hash line that immediately follows it
+              pattern = rf'(pkg\s*=\s*"{re.escape(pkg)}";\s*\nhash\s*=\s*")[^"]*(")'
+              return re.sub(pattern, rf'\g<1>{new_hash}\g<2>', text)
+
+          content = replace_platform_hash(content, "vc-native-linux-x64",  os.environ["HASH_X64"])
+          content = replace_platform_hash(content, "vc-native-linux-arm64", os.environ["HASH_ARM64"])
+
+          open(path, "w").write(content)
+          EOF
+
+          echo "Updated flake.nix:"
+          cat flake.nix
+
+      - name: Verify flake evaluates
+        if: steps.version.outputs.latest != steps.version.outputs.current
+        run: nix flake check --no-build
+
+      - name: Commit and push
+        if: steps.version.outputs.latest != steps.version.outputs.current
+        env:
+          VERSION: ${{ steps.version.outputs.latest }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add flake.nix
+          git commit -m "chore: update vercel CLI to v${VERSION}"
+          git push
