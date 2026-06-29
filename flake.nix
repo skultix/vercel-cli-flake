@@ -9,11 +9,11 @@
 	platforms = {
 		"x86_64-linux" = {
 			pkg = "vc-native-linux-x64";
-			hash = "sha512-0e/1SZKvk/mh1r1LfMahn5atJ4T7zs3pxAXz7bp/dR5CjB5lul/CrKdhDt6b/iidisjw92aMKxORJT6zbx2sbA==";
+			hash = "sha512-xiZBsvoWZBw/qkqFZjNp8bAdSfrUFWdGcLaK4xWByJw4nb4Rvc5lNMyjDNfAUzBnrtN1ad91qTCJIVEh5t1+ow==";
 		};
 		"aarch64-linux" = {
 			pkg = "vc-native-linux-arm64";
-			hash = "sha512-IJxEO7dm/ZVRiza0/fJfzEQoRrsUfAgOyPOs56OzLsBcVOW+54VQ09jxNagWNEnOcGHM/IWzxWIcU+pcLX3uPw==";
+			hash = "sha512-uKx0HGNyk1YP8y/C3E4+1N0ELli8INrEx08kQO7muLHfFAj9aSlryJnBDSJ6ePEjVY4XyoZezJtk631Z4kA4yw==";
 		};
 	};
 

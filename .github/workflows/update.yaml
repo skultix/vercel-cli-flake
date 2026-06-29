@@ -49,9 +49,9 @@ jobs:
           RAW_X64=$(fetch_hash "vc-native-linux-x64")
           RAW_ARM64=$(fetch_hash "vc-native-linux-arm64")
 
-          # Convert raw base16 nix hash to sri sha512 format
+          # nix-prefetch-url emits a base32 nix hash; convert it to SRI.
           to_sri() {
-            echo "sha512-$(echo "$1" | xxd -r -p | base64 -w 0)"
+            nix hash to-sri --type sha512 "$1"
           }
 
           HASH_X64=$(to_sri "$RAW_X64")
@@ -81,7 +81,7 @@ jobs:
 
           def replace_platform_hash(text, pkg, new_hash):
               # Match the pkg line and the hash line that immediately follows it
-              pattern = rf'(pkg\s*=\s*"{re.escape(pkg)}";\s*\nhash\s*=\s*")[^"]*(")'
+              pattern = rf'(pkg\s*=\s*"{re.escape(pkg)}";\s*\n\s*hash\s*=\s*")[^"]*(")'
               return re.sub(pattern, rf'\g<1>{new_hash}\g<2>', text)
 
           content = replace_platform_hash(content, "vc-native-linux-x64",  os.environ["HASH_X64"])
@@ -93,9 +93,14 @@ jobs:
           echo "Updated flake.nix:"
           cat flake.nix
 
-      - name: Verify flake evaluates
+      - name: Verify flake evaluates and builds
         if: steps.version.outputs.latest != steps.version.outputs.current
-        run: nix flake check --no-build
+        run: |
+          nix flake check --no-build
+          # Actually build to verify the fetched src hash is correct.
+          # Only x86_64-linux can be built on this runner; the arm64 hash is
+          # validated by nix-prefetch-url in the "Fetch hashes" step.
+          nix build .#packages.x86_64-linux.default --no-link
 
       - name: Commit and push
         if: steps.version.outputs.latest != steps.version.outputs.current
