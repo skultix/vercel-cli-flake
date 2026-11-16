@@ -4,16 +4,16 @@
 	inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
 	outputs = { self, nixpkgs }: let
-	version = "65.12.1";
+	version = "65.16.0";
 
 	platforms = {
 		"x86_64-linux" = {
 			pkg = "vc-native-linux-x64";
-			hash = "sha512-ZyAurYwCJGN/9Tg5KynmhDEBU/v7X6v85EsG/RMiAe2xmupkyT3k+x5gc5dRivTWQZI1Q+5V44xAc2gAKbJ+Vw==";
+			hash = "sha512-ALGl5nis4LaGDzms+EBoQ6eaSP3ckhonyM035Eq1KYaRNnYOF7s+5xUb2fQt8EQrlPPe8MXeU0iCHKXlyp/a9g==";
 		};
 		"aarch64-linux" = {
 			pkg = "vc-native-linux-arm64";
-			hash = "sha512-I0UpQOmAKMSPtniPJdDUbFD12TnpAS5ge61GBqZ4iO9r9MjwTxqrPPzsPUKSyJ2XNdATXQMu0MXAU7lE3cfVag==";
+			hash = "sha512-iWIkcOtIikH797V42RJRl1JGacKU0aeck/tRzNKi86x0SJF0+PVurc42Jj2kO5Zqr8j4XxdKIFggKn1yQs0mdw==";
 		};
 	};
 
